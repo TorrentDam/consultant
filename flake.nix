@@ -22,10 +22,15 @@
           metals = pkgs.metals.override {
             jre = jdk;
             extraJavaOpts = "-XX:+UseG1GC -XX:+UseStringDeduplication -Xss4m -Xms100m "
-              + "-Dmetals.autoImportBuilds=all "
-              + "-Dmetals.defaultBspToBuildTool=true "
-              + "-Dmetals.targetBuildTool=mill "
-              + "-Dmetals.enableBestEffort=true";
+              + "-Dmetals.auto-import-builds=all "
+              + "-Dmetals.default-bsp-to-build-tool=true "
+              + "-Dmetals.target-build-tool=mill "
+              + "-Dmetals.enable-best-effort=true "
+              # Bare LSP clients (like opencode) don't implement
+              # window/showMessageRequest; unanswered, it aborts Metals'
+              # initialization. This flag makes Metals auto-answer such
+              # prompts with their default action instead.
+              + "-Dmetals.disable-show-message-request=true";
           };
         in {
           default = pkgs.mkShell {
