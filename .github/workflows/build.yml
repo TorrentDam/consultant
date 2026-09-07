@@ -1,0 +1,24 @@
+name: build
+
+on: [push]
+
+env:
+  FORCE_COLOR: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@main
+      - name: Cache Coursier and Mill
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/coursier
+            ~/.cache/mill
+          key: ${{ runner.os }}-mill-${{ hashFiles('build.mill') }}
+      - name: Compile
+        run: nix develop --command mill __.compile
+      - name: Test
+        run: nix develop --command mill __.test

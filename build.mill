@@ -1,0 +1,15 @@
+//| mill-jvm-version: system
+
+package build
+import mill.*, scalalib.*
+
+object consultant extends ScalaModule {
+  def scalaVersion = "3.8.4"
+
+  object test extends ScalaTests, TestModule.Munit {
+    def munitVersion = "1.3.5"
+    def mvnDeps = Seq(
+      mvn"org.scalameta::munit::${munitVersion()}"
+    )
+  }
+}

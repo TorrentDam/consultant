@@ -26,11 +26,13 @@ search and add titles in [Radarr](https://radarr.video/) (movies) and
   OpenAI-compatible client (`com.softwaremill.sttp.ai %% openai`), used to implement
   the agent loop and tool calling. Works with any OpenAI-compatible API
   (OpenAI, Ollama, OpenRouter, Grok, …).
+- Built with [Mill](https://mill-build.org). Toolchain (Mill, JDK, Metals) is
+  pinned in `flake.nix` — run everything through `nix develop`.
 
 ## Running
 
 ```
-sbt run
+nix develop --command mill consultant.run
 ```
 
 Connect to the WebSocket endpoint and send a text message to start a conversation.

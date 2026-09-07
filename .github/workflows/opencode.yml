@@ -28,6 +28,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
       - name: Run opencode
         uses: anomalyco/opencode/github@latest
         env:
