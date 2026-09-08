@@ -9,12 +9,15 @@ object consultant extends ScalaModule {
   def sttpAiVersion = "0.11.0"
   def oxVersion     = "1.0.6"
   def tapirVersion  = "1.13.31"
+  def logbackVersion = "1.6.3"
 
   def mvnDeps = Seq(
     mvn"com.softwaremill.sttp.ai::openai:$sttpAiVersion",
     mvn"com.softwaremill.sttp.ai::ox:$sttpAiVersion",
     mvn"com.softwaremill.ox::core:$oxVersion",
-    mvn"com.softwaremill.sttp.tapir::tapir-netty-server-sync:$tapirVersion"
+    mvn"com.softwaremill.ox::mdc-logback:$oxVersion",
+    mvn"com.softwaremill.sttp.tapir::tapir-netty-server-sync:$tapirVersion",
+    mvn"ch.qos.logback:logback-classic:$logbackVersion"
   )
 
   object test extends ScalaTests, TestModule.Munit {
