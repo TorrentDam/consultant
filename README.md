@@ -19,12 +19,12 @@ search and add titles in [Radarr](https://radarr.video/) (movies) and
 
 ## Stack
 
-- [Scala 3](https://scala-lang.org/) with the [Typelevel](https://typelevel.org/) stack:
-  - [cats-effect](https://typelevel.org/cats-effect/) / [fs2](https://fs2.io/) — effects & streaming
-  - [http4s](https://http4s.org/) — HTTP & WebSocket server
+- [Scala 3](https://scala-lang.org/) with a direct-style stack (no effect system):
+  - [Ox](https://ox.softwaremill.com/) — structured concurrency, streaming, resiliency
+  - [Tapir](https://tapir.softwaremill.com/) `tapir-netty-server-sync` — HTTP & WebSocket server
 - [sttp-ai](https://github.com/softwaremill/sttp-ai) — Scala toolkit for LLMs;
-  OpenAI-compatible client (`com.softwaremill.sttp.ai %% openai`), used to implement
-  the agent loop and tool calling. Works with any OpenAI-compatible API
+  OpenAI-compatible client (`com.softwaremill.sttp.ai %% openai` + `%% ox`),
+  used for the agent loop and tool calling. Works with any OpenAI-compatible API
   (OpenAI, Ollama, OpenRouter, Grok, …).
 - Built with [Mill](https://mill-build.org). Toolchain (Mill, JDK, Metals) is
   pinned in `flake.nix` — run everything through `nix develop`.

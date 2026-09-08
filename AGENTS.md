@@ -11,11 +11,15 @@ tools), and responses are streamed back over the same socket.
 
 ## Stack
 
-- Scala 3 (3.8.4), built with [Mill](https://mill-build.org) 1.1.8
-- Typelevel stack: cats-effect, fs2 (streaming), http4s (HTTP & WebSocket server)
+- Scala 3 (3.9.0 LTS), built with [Mill](https://mill-build.org) 1.1.8
+- Direct style with [Ox](https://github.com/softwaremill/ox) (core 1.0.6):
+  structured concurrency, streaming (`Flow`), resiliency — no effect system
+- [Tapir](https://tapir.softwaremill.com) `tapir-netty-server-sync` — HTTP &
+  WebSocket server (`webSocketBody` with `OxStreams`)
 - [sttp-ai](https://github.com/softwaremill/sttp-ai) with the OpenAI-compatible
-  client module (`"com.softwaremill.sttp.ai" %% "openai"`) — used for the agent
-  loop and tool calling
+  client module (`"com.softwaremill.sttp.ai" %% "openai"` + `%% "ox"` for
+  streaming) — used for the agent loop and tool calling; agent runs in
+  blocking direct style (`OpenAIAgent.synchronous`)
 - Toolchain (Mill, JDK, Metals) is pinned in `flake.nix`
 
 ## Tools the agent can call
@@ -47,8 +51,8 @@ Drop the `nix develop --command` prefix if you're already inside the dev shell.
 
 - **Language**: Scala 3, max line length 120
 - **Formatting**: Scalafmt, config in `.scalafmt.conf`
-- **Testing**: MUnit (`munit.FunSuite`); add `munit-cats-effect` and extend
-  `CatsEffectSuite` once effectful code needs testing
+- **Testing**: MUnit (`munit.FunSuite`); use [sttp-ai](https://sttp-ai.softwaremill.com/agents/testing.html)
+  `agent-testkit` to test agents offline, without calling a paid API
 
 ## LSP (Metals)
 
@@ -60,7 +64,8 @@ rather than trusting the silence.
 
 ## Conventions
 
-- Prefer pure functional style consistent with cats-effect / fs2 idioms.
+- Prefer direct-style, expression-oriented code consistent with Ox idioms
+  (`supervised`, `fork`, `Flow`, `Channel`) — no effect system.
 - Keep the agent loop iteration cap at 5.
 - One WebSocket connection = one conversation; conversation state is per-connection.
 - API keys and secrets come from environment variables / config — never hardcode
