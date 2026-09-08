@@ -17,7 +17,7 @@ jobs:
           path: |
             ~/.cache/coursier
             ~/.cache/mill
-          key: ${{ runner.os }}-mill-${{ hashFiles('build.mill') }}
+          key: ${{ runner.os }}-mill-${{ hashFiles('build.mill', 'flake.lock') }}
       - name: Compile
         run: nix develop --command mill __.compile
       - name: Test

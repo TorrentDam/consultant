@@ -29,8 +29,9 @@ Tool implementations talk to the Radarr/Sonarr HTTP APIs over sttp.
 ## Build/Test Commands
 
 ```bash
-nix develop --command mill __.compile   # compile all modules
-nix develop --command mill __.test      # run all tests
+nix develop --command mill __.compile   # compile all modules (JVM + Native)
+nix develop --command mill __.test      # run all tests (JVM + Native)
+nix develop --command mill consultantNative.nativeLink  # build the native binary
 nix develop --command mill mill.scalalib.scalafmt.ScalafmtModule/reformatAll __.sources
 ```
 
@@ -39,9 +40,12 @@ Drop the `nix develop --command` prefix if you're already inside the dev shell.
 
 ## Project Structure
 
-- `flake.nix` / `flake.lock` — pins Mill, JDK, and Metals versions
+- `flake.nix` / `flake.lock` — pins Mill, JDK, Metals, and the Scala Native
+  toolchain (LLVM/Clang, Boehm GC) versions
 - `build.mill` — Mill build definition
-- `consultant/` — application module; sources in `src`, tests in `test/src`
+- `consultant/` — application module; sources in `src`, tests in `test/src`.
+  The same sources are compiled for both the JVM (`consultant`) and Scala Native
+  (`consultantNative`) targets.
 
 ## Code Style
 

@@ -28,11 +28,17 @@ search and add titles in [Radarr](https://radarr.video/) (movies) and
   (OpenAI, Ollama, OpenRouter, Grok, …).
 - Built with [Mill](https://mill-build.org). Toolchain (Mill, JDK, Metals) is
   pinned in `flake.nix` — run everything through `nix develop`.
+- Two build targets share the same sources:
+  - `consultant` — JVM target (`mill consultant.run`)
+  - `consultantNative` — Scala Native target ([Scala Native](https://scala-native.org/) 0.5),
+    an ahead-of-time compiled binary (`mill consultantNative.nativeLink`). The
+    native toolchain (LLVM/Clang, Boehm GC) is provided by the nix dev shell.
 
 ## Running
 
 ```
-nix develop --command mill consultant.run
+nix develop --command mill consultant.run          # JVM
+nix develop --command mill consultantNative.run    # Scala Native
 ```
 
 Connect to the WebSocket endpoint and send a text message to start a conversation.

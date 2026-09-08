@@ -32,9 +32,13 @@
               # prompts with their default action instead.
               + "-Dmetals.disable-show-message-request=true";
           };
+
+          # Scala Native toolchain: LLVM/Clang for ahead-of-time compilation
+          # and the Boehm GC / zlib for the optional native runtime libraries.
+          clang = pkgs.llvmPackages_18.clang;
         in {
           default = pkgs.mkShell {
-            packages = [ mill metals jdk ];
+            packages = [ mill metals jdk clang pkgs.boehmgc pkgs.zlib ];
             JAVA_HOME = "${jdk.home}";
             # Mill's BSP mode defaults to a separate `.bsp/mill-bsp-out/` output
             # directory. Without this, the LSP (via Metals/BSP) and the CLI
