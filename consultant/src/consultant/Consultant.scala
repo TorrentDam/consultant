@@ -1,9 +1,12 @@
 package consultant
 
+import consultant.mcp.RadarrMcpServer
+import consultant.radarr.{RadarrClient, RadarrConfig}
 import ox.*
 import ox.channels.Channel
 import ox.flow.{Flow, FlowEmit}
 import ox.logback.InheritableMDC
+import sttp.client4.DefaultSyncBackend
 import sttp.ai.openai.OpenAISyncClient
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.ChatBody
 import sttp.ai.openai.requests.completions.chat.ChatRequestBody.ChatCompletionModel.{
@@ -81,10 +84,24 @@ object Consultant extends OxApp:
 
     val chatServerEndpoint = wsEndpoint.handleSuccess(_ => chatPipe(client, chatModel))
 
+    val radarrBaseUrl = sys.env.getOrElse("RADARR_URL", "http://localhost:7878")
+    val radarrApiKey = sys.env.getOrElse("RADARR_API_KEY", "")
+    val mcpServerEndpoint =
+      if radarrApiKey.nonEmpty then
+        val radarrClient = RadarrClient(
+          RadarrConfig(Uri.unsafeParse(radarrBaseUrl), radarrApiKey),
+          DefaultSyncBackend()
+        )
+        Some(RadarrMcpServer.endpoint(radarrClient, List("mcp")))
+      else
+        logger.warn("RADARR_API_KEY not set — the Radarr MCP server endpoint is disabled")
+        None
+
     val binding = NettySyncServer()
       .host("0.0.0.0")
       .port(8080)
       .addEndpoint(chatServerEndpoint)
+      .addEndpoints(mcpServerEndpoint.toList)
       .start()
 
     releaseAfterScope(binding.stop())

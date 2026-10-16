@@ -7,6 +7,12 @@ users manage their movie library. The agent runs a tool-calling loop and can
 search and add titles in [Radarr](https://radarr.video/) (movies) and
 [Sonarr](https://sonarr.tv/) (TV shows), as well as look up available torrents.
 
+It also exposes an [MCP](https://modelcontextprotocol.io/) server at `POST /mcp`
+(built with [Chimp](https://github.com/softwaremill/chimp)) with three tools for
+Radarr: `search`, `add` and `get`. The endpoint is enabled when `RADARR_API_KEY`
+is set; `RADARR_URL` configures the Radarr base URL (default
+`http://localhost:7878`).
+
 ## How it works
 
 1. The user opens a WebSocket connection — each connection is a conversation.
