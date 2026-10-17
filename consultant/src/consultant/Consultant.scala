@@ -40,13 +40,42 @@ class Conversation(client: OpenAISyncClient, model: CustomModel, logger: Logger)
 object Consultant extends OxApp:
   private val logger = LoggerFactory.getLogger(getClass)
 
-  private def envConfig: (String, Uri, String) =
+  /** Checked configuration, parsed from environment variables once at startup. */
+  final case class LlmConfig(apiKey: String, baseUrl: Uri, model: String)
+  final case class RadarrConfigEnv(baseUrl: Uri, apiKey: String)
+  final case class AppConfig(llm: LlmConfig, radarr: Option[RadarrConfigEnv])
+
+  /** Fails fast with a descriptive error if any environment variable is invalid. */
+  private def parseEnvOrThrow(): AppConfig =
+    def requireNonEmpty(name: String): String =
+      sys.env.get(name).flatMap(v => Option.when(v.trim.nonEmpty)(v)) match
+        case Some(value) => value
+        case None => throw IllegalStateException(s"$name must be set to a non-empty value")
+
+    def parseUri(name: String, default: Option[String] = None): Uri =
+      val raw = sys.env.getOrElse(name, default.getOrElse(""))
+      Uri.parse(raw) match
+        case Right(uri) if uri.scheme.isDefined && uri.host.isDefined => uri
+        case Right(_) => throw IllegalStateException(s"Invalid $name '$raw': an absolute http(s) URL is required")
+        case Left(err) => throw IllegalStateException(s"Invalid $name '$raw': $err")
+
     val apiKey = sys.env.getOrElse("OPENAI_KEY", sys.env.getOrElse("OPENAI_API_KEY", "ollama"))
-    val baseUrl = Uri.parse(sys.env.getOrElse("OPENAI_BASE_URL", "http://localhost:11434/v1")) match
-      case Right(uri) => uri
-      case Left(err)  => throw new IllegalArgumentException(s"Invalid OPENAI_BASE_URL: $err")
-    val model = sys.env.getOrElse("OPENAI_MODEL", "GLM-5.3")
-    (apiKey, baseUrl, model)
+    val llm = LlmConfig(
+      apiKey = apiKey,
+      baseUrl = parseUri("OPENAI_BASE_URL", Some("http://localhost:11434/v1")),
+      model = sys.env.getOrElse("OPENAI_MODEL", "GLM-5.3")
+    )
+
+    val radarr =
+      sys.env.get("RADARR_API_KEY").flatMap(v => Option.when(v.trim.nonEmpty)(v)) match
+        case Some(key) =>
+          val baseUrl = parseUri("RADARR_URL", Some("http://localhost:7878"))
+          Some(RadarrConfigEnv(baseUrl, key))
+        case None =>
+          logger.warn("RADARR_API_KEY not set — the Radarr MCP server endpoint is disabled")
+          None
+
+    AppConfig(llm, radarr)
 
   private val wsEndpoint = endpoint.get
     .in("chat")
@@ -78,24 +107,26 @@ object Consultant extends OxApp:
 
   override def run(args: Vector[String])(using Ox): ExitCode =
     InheritableMDC.init
-    val (apiKey, baseUrl, model) = envConfig
-    val client = OpenAISyncClient(apiKey, baseUrl)
-    val chatModel = CustomModel(model)
+
+    val config =
+      try parseEnvOrThrow()
+      catch
+        case e: IllegalStateException =>
+          logger.error(s"Invalid configuration, refusing to start: ${e.getMessage}")
+          return ExitCode.Failure(1)
+
+    val client = OpenAISyncClient(config.llm.apiKey, config.llm.baseUrl)
+    val chatModel = CustomModel(config.llm.model)
 
     val chatServerEndpoint = wsEndpoint.handleSuccess(_ => chatPipe(client, chatModel))
 
-    val radarrBaseUrl = sys.env.getOrElse("RADARR_URL", "http://localhost:7878")
-    val radarrApiKey = sys.env.getOrElse("RADARR_API_KEY", "")
-    val mcpServerEndpoint =
-      if radarrApiKey.nonEmpty then
-        val radarrClient = RadarrClient(
-          RadarrConfig(Uri.unsafeParse(radarrBaseUrl), radarrApiKey),
-          DefaultSyncBackend()
-        )
-        Some(RadarrMcpServer.endpoint(radarrClient, List("mcp")))
-      else
-        logger.warn("RADARR_API_KEY not set — the Radarr MCP server endpoint is disabled")
-        None
+    val mcpServerEndpoint = config.radarr.map { radarr =>
+      val radarrClient = RadarrClient(
+        RadarrConfig(radarr.baseUrl, radarr.apiKey),
+        DefaultSyncBackend()
+      )
+      RadarrMcpServer.endpoint(radarrClient, List("mcp"))
+    }
 
     val binding = NettySyncServer()
       .host("0.0.0.0")
@@ -105,5 +136,5 @@ object Consultant extends OxApp:
       .start()
 
     releaseAfterScope(binding.stop())
-    logger.info(s"Consultant listening on ${binding.hostName}:${binding.port} (model: $model)")
+    logger.info(s"Consultant listening on ${binding.hostName}:${binding.port} (model: ${config.llm.model})")
     never
