@@ -3,6 +3,7 @@ package consultant.radarr
 import io.circe.{Codec, Decoder, Json}
 import io.circe.parser
 import io.circe.syntax.*
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.client4.{Request, SyncBackend, asString, basicRequest}
 import sttp.model.{MediaType, Uri}
 
@@ -45,6 +46,7 @@ final case class RadarrConfig(
 
 /** Minimal synchronous Radarr v3 API client used by the MCP tools. */
 final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
+  private val logger: Logger = LoggerFactory.getLogger("consultant.radarr")
   private val XApiKeyHeader = "X-Api-Key"
 
   private def sendJson[A: Decoder](request: Request[Either[String, String]]): Either[RadarrError, A] =
@@ -52,9 +54,14 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
       case response if response.code.isSuccess =>
         response.body match
           case Right(body) =>
-            parser.decode[A](body).left.map(e => RadarrError.InvalidResponse(e.getMessage))
+            parser.decode[A](body).left.map { e =>
+              logger.warn(s"Radarr returned invalid JSON for ${request.method} ${request.uri.path}: ${e.getMessage}")
+              RadarrError.InvalidResponse(e.getMessage)
+            }
           case Left(error) => Left(RadarrError.RequestFailed(response.code.code, error))
-      case response => Left(RadarrError.RequestFailed(response.code.code, s"${response.body.merge}"))
+      case response =>
+        logger.warn(s"Radarr request failed: ${request.method} ${request.uri.path} -> ${response.code.code}")
+        Left(RadarrError.RequestFailed(response.code.code, s"${response.body.merge}"))
 
   private def getJson[A: Decoder](uri: Uri): Either[RadarrError, A] =
     sendJson[A](
@@ -77,10 +84,12 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
 
   /** `search`: looks up movies by title. Returns both library and non-library results. */
   def search(term: String): Either[RadarrError, List[Movie]] =
+    logger.debug(s"searching Radarr for '$term'")
     getJson[List[Movie]](lookupUri.param("term", term))
 
   /** `add`: adds a movie (identified by TMDB id) to Radarr, so Radarr starts looking for it. */
   def add(tmdbId: Long, monitored: Boolean = true): Either[RadarrError, Movie] =
+    logger.info(s"adding movie with TMDB id $tmdbId to Radarr (monitored=$monitored)")
     lookupByTmdb(tmdbId).flatMap {
       case movie :: _ =>
         val body = Json
@@ -98,6 +107,7 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
 
   /** `get`: returns the film's state in Radarr — whether it is in the library, downloaded, monitored. */
   def get(tmdbId: Long): Either[RadarrError, FilmState] =
+    logger.debug(s"checking Radarr state for TMDB id $tmdbId")
     lookupByTmdb(tmdbId).map {
       case movie :: _ if movie.isInLibrary => FilmState.InLibrary(movie)
       case _                               => FilmState.NotInLibrary
