@@ -10,6 +10,12 @@ Consultant exposes an [MCP](https://modelcontextprotocol.io/) server at `POST /m
 
 - `RADARR_API_KEY` (required) — Radarr API key; the server refuses to start without it
 - `RADARR_URL` — Radarr base URL (default `http://localhost:7878`)
+- `MCP_ALLOWED_HOSTS` — hostnames accepted in the `Host`/`Origin` headers of MCP
+  requests, comma-separated (default: `localhost`, `127.0.0.1`, `::1`); `*` disables
+  the check. Chimp rejects requests whose `Host` is not on the list (HTTP 403), so
+  set this when clients reach the server through a proxy or a service DNS name —
+  for example `consultant,consultant.media-server.svc.cluster.local` inside
+  Kubernetes.
 
 ## Stack
 

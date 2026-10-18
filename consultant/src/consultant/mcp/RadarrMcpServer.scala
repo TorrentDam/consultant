@@ -37,7 +37,7 @@ object RadarrMcpServer:
     case FilmState.NotInLibrary => "The movie is not in the Radarr library."
 
   /** Creates the chimp MCP server with the `search`, `add` and `get` tools. */
-  def apply(client: RadarrClient): McpServer[sttp.shared.Identity] =
+  def apply(client: RadarrClient, originCheck: OriginCheck = OriginCheck.localhostOnly): McpServer[sttp.shared.Identity] =
     val search = tool("search")
       .description("Search for a movie in Radarr by title. Returns matching movies and their library state.")
       .input[SearchInput]
@@ -79,8 +79,9 @@ object RadarrMcpServer:
 
     McpServer[sttp.shared.Identity](name = "radarr-mcp", version = "0.1.0")
       .instructions("Tools for searching, adding and inspecting movies in a Radarr instance.")
+      .withOriginCheck(originCheck)
       .addTools(search, add, get)
 
   /** The tapir server endpoint exposing the MCP server at the given path, e.g. `List("mcp")`. */
-  def endpoint(client: RadarrClient, path: List[String]) =
-    apply(client).endpoint(path)
+  def endpoint(client: RadarrClient, path: List[String], originCheck: OriginCheck = OriginCheck.localhostOnly) =
+    apply(client, originCheck).endpoint(path)
