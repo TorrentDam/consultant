@@ -4,29 +4,24 @@ Guidelines for AI coding agents working on this repository.
 
 ## Project
 
-Film consultant — a Scala 3 web application exposing a single WebSocket endpoint
-that runs an agentic AI loop. Every WebSocket connection is a conversation:
-the user sends text messages, the agent answers (max 5 loop iterations with
-tools), and responses are streamed back over the same socket.
+Film consultant — a Scala 3 web application exposing a single MCP server
+endpoint (`POST /mcp`) with tools for managing a movie library in Radarr.
 
 ## Stack
 
 - Scala 3 (3.9.0 LTS), built with [Mill](https://mill-build.org) 1.1.8
 - Direct style with [Ox](https://github.com/softwaremill/ox) (core 1.0.6):
-  structured concurrency, streaming (`Flow`), resiliency — no effect system
-- [Tapir](https://tapir.softwaremill.com) `tapir-netty-server-sync` — HTTP &
-  WebSocket server (`webSocketBody` with `OxStreams`)
-- [sttp-ai](https://github.com/softwaremill/sttp-ai) with the OpenAI-compatible
-  client module (`"com.softwaremill.sttp.ai" %% "openai"` + `%% "ox"` for
-  streaming) — used for the agent loop and tool calling; agent runs in
-  blocking direct style (`OpenAIAgent.synchronous`)
+  structured concurrency, resiliency — no effect system
+- [Tapir](https://tapir.softwaremill.com) `tapir-netty-server-sync` — HTTP server
+- [Chimp](https://github.com/softwaremill/chimp) — MCP server and tool definitions
+- Tool implementations talk to the Radarr HTTP API over sttp.
 - Toolchain (Mill, JDK, Metals) is pinned in `flake.nix`
 
-## Tools the agent can call
+## Tools the MCP server exposes
 
-1. Search in Radarr/Sonarr
-2. Add to Radarr/Sonarr
-3. Get torrents
+1. Search in Radarr
+2. Add to Radarr
+3. Get a movie's state in Radarr
 
 Tool implementations talk to the Radarr/Sonarr HTTP APIs over sttp.
 
@@ -51,8 +46,7 @@ Drop the `nix develop --command` prefix if you're already inside the dev shell.
 
 - **Language**: Scala 3, max line length 120
 - **Formatting**: Scalafmt, config in `.scalafmt.conf`
-- **Testing**: MUnit (`munit.FunSuite`); use [sttp-ai](https://sttp-ai.softwaremill.com/agents/testing.html)
-  `agent-testkit` to test agents offline, without calling a paid API
+- **Testing**: MUnit (`munit.FunSuite`)
 
 ## LSP (Metals)
 
@@ -66,8 +60,6 @@ rather than trusting the silence.
 
 - Prefer direct-style, expression-oriented code consistent with Ox idioms
   (`supervised`, `fork`, `Flow`, `Channel`) — no effect system.
-- Keep the agent loop iteration cap at 5.
-- One WebSocket connection = one conversation; conversation state is per-connection.
 - API keys and secrets come from environment variables / config — never hardcode
   or commit them.
 - The repository is hosted on GitHub as a **private** repository.

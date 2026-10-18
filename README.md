@@ -1,37 +1,21 @@
 # Consultant
 
-A film consultant web application with an agentic AI backend.
+A film consultant web service.
 
-Consultant exposes a single WebSocket endpoint backed by an AI agent that helps
-users manage their movie library. The agent runs a tool-calling loop and can
-search and add titles in [Radarr](https://radarr.video/) (movies) and
-[Sonarr](https://sonarr.tv/) (TV shows), as well as look up available torrents.
-
-It also exposes an [MCP](https://modelcontextprotocol.io/) server at `POST /mcp`
+Consultant exposes an [MCP](https://modelcontextprotocol.io/) server at `POST /mcp`
 (built with [Chimp](https://github.com/softwaremill/chimp)) with three tools for
-Radarr: `search`, `add` and `get`. The endpoint is enabled when `RADARR_API_KEY`
-is set; `RADARR_URL` configures the Radarr base URL (default
-`http://localhost:7878`).
+[Radarr](https://radarr.video/): `search`, `add` and `get`.
 
-## How it works
+## Configuration
 
-1. The user opens a WebSocket connection — each connection is a conversation.
-2. The user sends a text message (e.g. *"Add the latest Denis Villeneuve movie"*).
-3. The agent runs an agentic loop — up to **5 iterations** — invoking tools as needed:
-   - **Search in Radarr/Sonarr** — look up a movie or TV show in the user's library
-   - **Add to Radarr/Sonarr** — add a new title for the *arr stack to grab
-   - **Get torrents** — list torrents available for a title
-4. The agent's final answer is sent back over the WebSocket.
+- `RADARR_API_KEY` (required) — Radarr API key; the server refuses to start without it
+- `RADARR_URL` — Radarr base URL (default `http://localhost:7878`)
 
 ## Stack
 
 - [Scala 3](https://scala-lang.org/) with a direct-style stack (no effect system):
-  - [Ox](https://ox.softwaremill.com/) — structured concurrency, streaming, resiliency
-  - [Tapir](https://tapir.softwaremill.com/) `tapir-netty-server-sync` — HTTP & WebSocket server
-- [sttp-ai](https://github.com/softwaremill/sttp-ai) — Scala toolkit for LLMs;
-  OpenAI-compatible client (`com.softwaremill.sttp.ai %% openai` + `%% ox`),
-  used for the agent loop and tool calling. Works with any OpenAI-compatible API
-  (OpenAI, Ollama, OpenRouter, Grok, …).
+  - [Ox](https://ox.softwaremill.com/) — structured concurrency, resiliency
+  - [Tapir](https://tapir.softwaremill.com/) `tapir-netty-server-sync` — HTTP server
 - Built with [Mill](https://mill-build.org). Toolchain (Mill, JDK, Metals) is
   pinned in `flake.nix` — run everything through `nix develop`.
 
@@ -41,9 +25,8 @@ is set; `RADARR_URL` configures the Radarr base URL (default
 nix develop --command mill consultant.run
 ```
 
-Connect to the WebSocket endpoint and send a text message to start a conversation.
+The MCP endpoint is served on port 8080 at `POST /mcp`.
 
 ## Status
 
-Private project. Initial milestone: single WebSocket endpoint with the agentic
-loop and the three tools listed above.
+Private project.
