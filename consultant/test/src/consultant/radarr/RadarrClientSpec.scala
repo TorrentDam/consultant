@@ -19,6 +19,12 @@ class RadarrClientSpec extends FunSuite:
       | "isAvailable": false, "monitored": true, "hasFile": false, "sizeOnDisk": null,
       | "qualityProfileId": 0, "path": null, "added": null}""".stripMargin
 
+  // Shape returned by GET /api/v3/movie/lookup?term=...: no hasFile/sizeOnDisk on results not in the library
+  private val termLookupJson =
+    """[{"id": 0, "title": "Dune", "tmdbId": 438631, "year": 2021, "overview": "o",
+      | "isAvailable": false, "monitored": false, "qualityProfileId": 0,
+      | "path": null, "added": null, "movieMetadata": {"tmdbId": 438631, "title": "Dune"}}]""".stripMargin
+
   private val qualityProfilesJson =
     """[{"id": 1, "name": "HD"}, {"id": 2, "name": "UHD"}]"""
 
@@ -68,6 +74,15 @@ class RadarrClientSpec extends FunSuite:
     assertEquals(result.map(_.head.title), Right("Dune"))
     assertEquals(result.map(_.head.isInLibrary), Right(true))
     assert(stub.calls.exists(_.startsWith("GET /api/v3/movie/lookup term=dune")))
+  }
+
+  test("search decodes term lookup results that omit hasFile and sizeOnDisk") {
+    val stub = RadarrStub(termSearch = termLookupJson)
+    val client = RadarrClient(config, stub.backend)
+    val result = client.search("dune")
+    assertEquals(result.map(_.size), Right(1))
+    assertEquals(result.map(_.head.hasFile), Right(false))
+    assertEquals(result.map(_.head.isInLibrary), Right(false))
   }
 
   test("get queries the Radarr library and reports InLibrary with downloaded state") {

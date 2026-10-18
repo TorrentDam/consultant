@@ -1,5 +1,6 @@
 package consultant
 
+import chimp.server.OriginCheck
 import consultant.mcp.RadarrMcpServer
 import consultant.radarr.{RadarrClient, RadarrConfig}
 import ox.*
@@ -13,7 +14,7 @@ object Consultant extends OxApp:
   private val logger = LoggerFactory.getLogger(getClass)
 
   /** Checked configuration, parsed from environment variables once at startup. */
-  final case class AppConfig(radarr: RadarrConfigEnv)
+  final case class AppConfig(radarr: RadarrConfigEnv, originCheck: OriginCheck)
   final case class RadarrConfigEnv(baseUrl: Uri, apiKey: String)
 
   /** Fails fast with a descriptive error if any environment variable is invalid. */
@@ -30,12 +31,22 @@ object Consultant extends OxApp:
         case Right(_) => throw IllegalStateException(s"Invalid $name '$raw': an absolute http(s) URL is required")
         case Left(err) => throw IllegalStateException(s"Invalid $name '$raw': $err")
 
+    def parseOriginCheck(): OriginCheck =
+      sys.env.get("MCP_ALLOWED_HOSTS").flatMap(v => Option.when(v.trim.nonEmpty)(v.trim)) match
+        case None      => OriginCheck.localhostOnly
+        case Some("*") => OriginCheck.disabled
+        case Some(csv) =>
+          val hosts = csv.split(",").map(_.trim).filter(_.nonEmpty).toSet
+          if hosts.isEmpty then
+            throw IllegalStateException("MCP_ALLOWED_HOSTS must be '*' or a comma-separated list of hostnames")
+          OriginCheck(hosts)
+
     val radarr = RadarrConfigEnv(
       baseUrl = parseUri("RADARR_URL", Some("http://localhost:7878")),
       apiKey = requireNonEmpty("RADARR_API_KEY")
     )
 
-    AppConfig(radarr)
+    AppConfig(radarr, parseOriginCheck())
 
   override def run(args: Vector[String])(using Ox): ExitCode =
     val config =
@@ -53,7 +64,7 @@ object Consultant extends OxApp:
     val binding = NettySyncServer()
       .host("0.0.0.0")
       .port(8080)
-      .addEndpoint(RadarrMcpServer.endpoint(radarrClient, List("mcp")))
+      .addEndpoint(RadarrMcpServer.endpoint(radarrClient, List("mcp"), config.originCheck))
       .start()
 
     releaseAfterScope(binding.stop())

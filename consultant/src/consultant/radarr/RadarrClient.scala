@@ -1,6 +1,7 @@
 package consultant.radarr
 
-import io.circe.{Codec, Decoder, Json}
+import io.circe.{Decoder, Json}
+import io.circe.derivation.{Configuration, ConfiguredCodec}
 import io.circe.parser
 import io.circe.syntax.*
 import org.slf4j.{Logger, LoggerFactory}
@@ -8,7 +9,8 @@ import sttp.client4.{Request, SyncBackend, asString, basicRequest}
 import sttp.model.{MediaType, Uri}
 
 /** A movie as returned by Radarr's v3 API. Fields that Radarr emits as non-nullable ints with
-  * sentinel defaults (0) or that may be absent (HasFile on lookup results) decode leniently.
+  * sentinel defaults (0) or that may be absent (HasFile on lookup results) decode leniently:
+  * members with a default are taken from it when the field is missing from the JSON.
   */
 final case class Movie(
     id: Option[Long],
@@ -18,15 +20,16 @@ final case class Movie(
     overview: Option[String],
     isAvailable: Boolean,
     monitored: Boolean,
-    hasFile: Boolean,
+    hasFile: Boolean = false,
     sizeOnDisk: Option[Long],
     qualityProfileId: Option[Long],
     path: Option[String],
     added: Option[String]
-) derives Codec.AsObject:
+) derives ConfiguredCodec:
   def isInLibrary: Boolean = id.exists(_ > 0)
 
 object Movie:
+  given Configuration = Configuration.default.withDefaults
   given sttp.tapir.Schema[Movie] = sttp.tapir.Schema.derived[Movie]
 
 /** The state of a film in Radarr, as reported by the `get` tool. */
