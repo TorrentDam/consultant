@@ -3,7 +3,6 @@ import mill.*, scalalib.*
 object consultant extends ScalaModule {
   def scalaVersion = "3.9.0"
 
-  def sttpAiVersion = "0.11.0"
   def oxVersion     = "1.0.6"
   def tapirVersion  = "1.13.31"
   def chimpVersion  = "0.6.0"
@@ -12,10 +11,7 @@ object consultant extends ScalaModule {
   def logbackVersion = "1.6.3"
 
   def mvnDeps = Seq(
-    mvn"com.softwaremill.sttp.ai::openai:$sttpAiVersion",
-    mvn"com.softwaremill.sttp.ai::ox:$sttpAiVersion",
     mvn"com.softwaremill.ox::core:$oxVersion",
-    mvn"com.softwaremill.ox::mdc-logback:$oxVersion",
     mvn"com.softwaremill.sttp.tapir::tapir-netty-server-sync:$tapirVersion",
     mvn"com.softwaremill.chimp::chimp-server:$chimpVersion",
     mvn"com.softwaremill.sttp.client4::core:$sttpVersion",
