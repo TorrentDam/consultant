@@ -22,6 +22,7 @@ endpoint (`POST /mcp`) with tools for managing a movie library in Radarr.
 1. Search in Radarr
 2. Add to Radarr
 3. Get a movie's state in Radarr
+4. Delete a movie from Radarr
 
 Tool implementations talk to the Radarr/Sonarr HTTP APIs over sttp.
 

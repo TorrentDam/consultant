@@ -3,8 +3,8 @@
 A film consultant web service.
 
 Consultant exposes an [MCP](https://modelcontextprotocol.io/) server at `POST /mcp`
-(built with [Chimp](https://github.com/softwaremill/chimp)) with three tools for
-[Radarr](https://radarr.video/): `search`, `add` and `get`.
+(built with [Chimp](https://github.com/softwaremill/chimp)) with four tools for
+[Radarr](https://radarr.video/): `search`, `add`, `get` and `delete`.
 
 ## Configuration
 

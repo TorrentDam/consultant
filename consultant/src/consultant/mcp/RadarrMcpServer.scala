@@ -11,6 +11,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 final case class SearchInput(query: String) derives Codec, Schema
 final case class AddInput(tmdbId: Long, monitored: Option[Boolean] = None) derives Codec, Schema
 final case class GetInput(tmdbId: Long) derives Codec, Schema
+final case class DeleteInput(tmdbId: Long) derives Codec, Schema
 
 /** Wiring between the Radarr client and the chimp tool definitions. */
 object RadarrMcpServer:
@@ -77,10 +78,23 @@ object RadarrMcpServer:
             logger.warn(s"tool 'get' failed: $error")
             ToolResult.error(s"Radarr get failed: $error")
 
+    val delete = tool("delete")
+      .description("Delete a movie from the Radarr library by its TMDB id.")
+      .input[DeleteInput]
+      .handle: input =>
+        logger.info(s"tool 'delete' called with tmdbId=${input.tmdbId}")
+        client.delete(input.tmdbId) match
+          case Right(movie) =>
+            logger.info(s"tool 'delete' removed '${movie.title}' (TMDB ${movie.tmdbId})")
+            ToolResult.text(s"Deleted ${movie.title} (TMDB ${movie.tmdbId}) from Radarr.")
+          case Left(error) =>
+            logger.warn(s"tool 'delete' failed: $error")
+            ToolResult.error(s"Radarr delete failed: $error")
+
     McpServer[sttp.shared.Identity](name = "radarr-mcp", version = "0.1.0")
       .instructions("Tools for searching, adding and inspecting movies in a Radarr instance.")
       .withOriginCheck(originCheck)
-      .addTools(search, add, get)
+      .addTools(search, add, get, delete)
 
   /** The tapir server endpoint exposing the MCP server at the given path, e.g. `List("mcp")`. */
   def endpoint(client: RadarrClient, path: List[String], originCheck: OriginCheck = OriginCheck.localhostOnly) =
