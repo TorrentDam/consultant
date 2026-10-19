@@ -134,6 +134,33 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
       case Nil        => FilmState.NotInLibrary
     }
 
+  /** `delete`: removes a movie (identified by TMDB id) from the Radarr library via
+    * `DELETE /api/v3/movie/{id}`. The movie must already be in the library.
+    */
+  def delete(tmdbId: Long): Either[RadarrError, Movie] =
+    logger.info(s"deleting movie with TMDB id $tmdbId from Radarr")
+    get(tmdbId).flatMap {
+      case FilmState.InLibrary(movie) =>
+        movie.id.filter(_ > 0) match
+          case Some(id) =>
+            sendEmpty(
+              basicRequest
+                .header(XApiKeyHeader, config.apiKey)
+                .response(asString)
+                .delete(moviesUri.addPath(id.toString))
+            ).map(_ => movie)
+          case None => Left(RadarrError.NotFound(s"movie with TMDB id $tmdbId has no Radarr id"))
+      case FilmState.NotInLibrary =>
+        Left(RadarrError.NotFound(s"movie with TMDB id $tmdbId is not in the Radarr library"))
+    }
+
+  private def sendEmpty(request: Request[Either[String, String]]): Either[RadarrError, Unit] =
+    request.send(backend) match
+      case response if response.code.isSuccess => Right(())
+      case response =>
+        logger.warn(s"Radarr request failed: ${request.method} ${request.uri.path} -> ${response.code.code}")
+        Left(RadarrError.RequestFailed(response.code.code, s"${response.body.merge}"))
+
   private def moviesUri: Uri = config.baseUrl.addPath("api", "v3", "movie")
 
   private def lookupUri: Uri = moviesUri.addPath("lookup")

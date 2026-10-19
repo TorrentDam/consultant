@@ -55,6 +55,7 @@ class RadarrClientSpec extends FunSuite:
         (s"$call ${r.uri.params}", termSearch)
       else if r.method.method == "GET" && path.endsWith(List("movie")) then
         (s"$call ${r.uri.params}", library)
+      else if r.method.method == "DELETE" then (s"$call ${r.uri.params}", "")
       else if r.method.method == "POST" then (s"$call ${r.body.show}", post)
       else throw IllegalArgumentException(s"unstubbed: $call")
 
@@ -118,6 +119,21 @@ class RadarrClientSpec extends FunSuite:
       assertEquals(field("rootFolderPath").as[String], Right("/movies"), s"required by Radarr PostValidator: $post")
       assertEquals(field("tmdbId").as[Long], Right(438631L))
     }
+  }
+
+  test("delete removes a movie from the library by its Radarr id") {
+    val stub = RadarrStub()
+    val client = RadarrClient(config, stub.backend)
+    val result = client.delete(438631)
+    assertEquals(result.map(_.title), Right("Dune"))
+    assert(stub.calls.exists(_.startsWith("DELETE /api/v3/movie/1")), s"calls: ${stub.calls}")
+  }
+
+  test("delete reports NotFound when the movie is not in the library") {
+    val stub = RadarrStub(library = "[]")
+    val client = RadarrClient(config, stub.backend)
+    assert(client.delete(438631).left.exists(_.isInstanceOf[RadarrError.NotFound]))
+    assert(!stub.calls.exists(_.startsWith("DELETE")))
   }
 
   test("search surfaces HTTP errors as RequestFailed") {

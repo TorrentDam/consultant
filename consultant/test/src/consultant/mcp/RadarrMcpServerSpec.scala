@@ -54,6 +54,7 @@ class RadarrMcpServerSpec extends FunSuite:
       else if r.method.method == "GET" && path.endsWith(List("rootfolder")) then ResponseStub.adjust(rootFoldersJson)
       else if r.method.method == "GET" && path.endsWith(List("movie", "lookup")) then ResponseStub.adjust(termSearch)
       else if r.method.method == "GET" && path.endsWith(List("movie")) then ResponseStub.adjust(library)
+      else if r.method.method == "DELETE" then ResponseStub.adjust("")
       else if r.method.method == "POST" then ResponseStub.adjust(addedMovieJson)
       else throw IllegalArgumentException(s"unstubbed: $path")
     }
@@ -79,7 +80,7 @@ class RadarrMcpServerSpec extends FunSuite:
   test("the server lists the search, add and get tools") {
     withServer(radarrBackend()) { client =>
       val tools = client.listTools()
-      assertEquals(tools.tools.map(_.name).toSet, Set("search", "add", "get"))
+      assertEquals(tools.tools.map(_.name).toSet, Set("search", "add", "get", "delete"))
     }
   }
 
@@ -114,5 +115,21 @@ class RadarrMcpServerSpec extends FunSuite:
       val result = client.callTool("add", Json.obj("tmdbId" -> 438631.asJson, "monitored" -> true.asJson))
       assert(!result.isError)
       assert(textOf(result).contains("Added Dune"))
+    }
+  }
+
+  test("delete removes the movie from Radarr") {
+    withServer(radarrBackend()) { client =>
+      val result = client.callTool("delete", Json.obj("tmdbId" -> 438631.asJson))
+      assert(!result.isError)
+      assert(textOf(result).contains("Deleted Dune"))
+    }
+  }
+
+  test("delete reports a movie that is not in the library") {
+    withServer(radarrBackend(library = emptyLibraryJson)) { client =>
+      val result = client.callTool("delete", Json.obj("tmdbId" -> 438631.asJson))
+      assert(result.isError)
+      assert(textOf(result).contains("not in the Radarr library"))
     }
   }
