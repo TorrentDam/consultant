@@ -79,14 +79,14 @@ object RadarrMcpServer:
             ToolResult.error(s"Radarr get failed: $error")
 
     val delete = tool("delete")
-      .description("Delete a movie from the Radarr library by its TMDB id.")
+      .description("Delete a movie from the Radarr library by its TMDB id, including its files.")
       .input[DeleteInput]
       .handle: input =>
         logger.info(s"tool 'delete' called with tmdbId=${input.tmdbId}")
-        client.delete(input.tmdbId) match
+        client.delete(input.tmdbId, deleteFiles = true) match
           case Right(movie) =>
             logger.info(s"tool 'delete' removed '${movie.title}' (TMDB ${movie.tmdbId})")
-            ToolResult.text(s"Deleted ${movie.title} (TMDB ${movie.tmdbId}) from Radarr.")
+            ToolResult.text(s"Deleted ${movie.title} (TMDB ${movie.tmdbId}) from Radarr, including its files.")
           case Left(error) =>
             logger.warn(s"tool 'delete' failed: $error")
             ToolResult.error(s"Radarr delete failed: $error")
