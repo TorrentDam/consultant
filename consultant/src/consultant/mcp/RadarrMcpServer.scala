@@ -11,7 +11,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 final case class SearchInput(query: String) derives Codec, Schema
 final case class AddInput(tmdbId: Long, monitored: Option[Boolean] = None) derives Codec, Schema
 final case class GetInput(tmdbId: Long) derives Codec, Schema
-final case class DeleteInput(tmdbId: Long, deleteFiles: Option[Boolean] = None) derives Codec, Schema
+final case class DeleteInput(tmdbId: Long) derives Codec, Schema
 
 /** Wiring between the Radarr client and the chimp tool definitions. */
 object RadarrMcpServer:
@@ -79,20 +79,14 @@ object RadarrMcpServer:
             ToolResult.error(s"Radarr get failed: $error")
 
     val delete = tool("delete")
-      .description(
-        "Delete a movie from the Radarr library by its TMDB id. Set deleteFiles to also remove the movie's files from disk."
-      )
+      .description("Delete a movie from the Radarr library by its TMDB id, including its files.")
       .input[DeleteInput]
       .handle: input =>
-        val deleteFiles = input.deleteFiles.getOrElse(false)
-        logger.info(s"tool 'delete' called with tmdbId=${input.tmdbId}, deleteFiles=$deleteFiles")
-        client.delete(input.tmdbId, deleteFiles) match
+        logger.info(s"tool 'delete' called with tmdbId=${input.tmdbId}")
+        client.delete(input.tmdbId, deleteFiles = true) match
           case Right(movie) =>
             logger.info(s"tool 'delete' removed '${movie.title}' (TMDB ${movie.tmdbId})")
-            ToolResult.text(
-              s"Deleted ${movie.title} (TMDB ${movie.tmdbId}) from Radarr" +
-                (if deleteFiles then ", including its files." else ".")
-            )
+            ToolResult.text(s"Deleted ${movie.title} (TMDB ${movie.tmdbId}) from Radarr, including its files.")
           case Left(error) =>
             logger.warn(s"tool 'delete' failed: $error")
             ToolResult.error(s"Radarr delete failed: $error")
