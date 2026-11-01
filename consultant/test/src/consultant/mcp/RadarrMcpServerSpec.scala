@@ -126,6 +126,15 @@ class RadarrMcpServerSpec extends FunSuite:
     }
   }
 
+  test("delete with deleteFiles also removes the movie's files") {
+    withServer(radarrBackend()) { client =>
+      val result =
+        client.callTool("delete", Json.obj("tmdbId" -> 438631.asJson, "deleteFiles" -> true.asJson))
+      assert(!result.isError)
+      assert(textOf(result).contains("including its files"))
+    }
+  }
+
   test("delete reports a movie that is not in the library") {
     withServer(radarrBackend(library = emptyLibraryJson)) { client =>
       val result = client.callTool("delete", Json.obj("tmdbId" -> 438631.asJson))

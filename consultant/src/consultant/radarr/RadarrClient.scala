@@ -135,10 +135,11 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
     }
 
   /** `delete`: removes a movie (identified by TMDB id) from the Radarr library via
-    * `DELETE /api/v3/movie/{id}`. The movie must already be in the library.
+    * `DELETE /api/v3/movie/{id}?deleteFiles=...`. The movie must already be in the library;
+    * `deleteFiles` also removes the movie's files from disk when true.
     */
-  def delete(tmdbId: Long): Either[RadarrError, Movie] =
-    logger.info(s"deleting movie with TMDB id $tmdbId from Radarr")
+  def delete(tmdbId: Long, deleteFiles: Boolean = false): Either[RadarrError, Movie] =
+    logger.info(s"deleting movie with TMDB id $tmdbId from Radarr (deleteFiles=$deleteFiles)")
     get(tmdbId).flatMap {
       case FilmState.InLibrary(movie) =>
         movie.id.filter(_ > 0) match
@@ -147,7 +148,7 @@ final class RadarrClient(config: RadarrConfig, backend: SyncBackend):
               basicRequest
                 .header(XApiKeyHeader, config.apiKey)
                 .response(asString)
-                .delete(moviesUri.addPath(id.toString))
+                .delete(moviesUri.addPath(id.toString).param("deleteFiles", deleteFiles.toString))
             ).map(_ => movie)
           case None => Left(RadarrError.NotFound(s"movie with TMDB id $tmdbId has no Radarr id"))
       case FilmState.NotInLibrary =>

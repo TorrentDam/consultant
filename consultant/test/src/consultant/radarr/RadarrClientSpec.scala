@@ -126,7 +126,15 @@ class RadarrClientSpec extends FunSuite:
     val client = RadarrClient(config, stub.backend)
     val result = client.delete(438631)
     assertEquals(result.map(_.title), Right("Dune"))
-    assert(stub.calls.exists(_.startsWith("DELETE /api/v3/movie/1")), s"calls: ${stub.calls}")
+    assert(stub.calls.exists(_.startsWith("DELETE /api/v3/movie/1 deleteFiles=false")), s"calls: ${stub.calls}")
+  }
+
+  test("delete can also remove the movie's files from disk") {
+    val stub = RadarrStub()
+    val client = RadarrClient(config, stub.backend)
+    val result = client.delete(438631, deleteFiles = true)
+    assertEquals(result.map(_.title), Right("Dune"))
+    assert(stub.calls.exists(_.startsWith("DELETE /api/v3/movie/1 deleteFiles=true")), s"calls: ${stub.calls}")
   }
 
   test("delete reports NotFound when the movie is not in the library") {
